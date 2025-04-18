@@ -135,15 +135,15 @@
 
   <div id="tebakBola" class="hidden">
     <p id="tebakBolaResult">Pilih gelas yang menurutmu ada bolanya!</p>
-    <div class="lives">❤️ Nyawa: <span id="lifeCount">3</span></div>
-    <div class="score">⭐ Skor: <span id="scoreCount">0</span></div>
+    <div class="lives">Nyawa: <span id="lifeCount">3</span></div>
+    <div class="score">Skor: <span id="scoreCount">0</span></div>
     <div class="glass-container" id="glassContainer">
       <div class="glass" onclick="guessGlass(0)"></div>
       <div class="glass" onclick="guessGlass(1)"></div>
       <div class="glass" onclick="guessGlass(2)"></div>
       <div class="ball hidden" id="ball"></div>
     </div>
-    <button class="game-btn hidden" id="retryBtn" onclick="startGame('bola')">🔁 Coba Lagi</button>
+    <button class="game-btn hidden" id="retryBtn" onclick="startGame('bola')">Coba Lagi</button>
   </div>
 </div>
 
@@ -248,7 +248,7 @@ function guessGlass(index) {
     document.getElementById("lifeCount").innerText = lives;
     result.innerText = `❌ Salah! Sisa nyawa: ${lives}`;
     if (lives <= 0) {
-      result.innerText = "💀 Game Over!";
+      result.innerText = "Game Over!";
       canClick = false;
       document.getElementById("retryBtn").classList.remove("hidden");
     }
