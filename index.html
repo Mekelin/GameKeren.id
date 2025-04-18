@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Game Multi-User</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #74ebd5 0%, #ACB6E5 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    .container {
+      width: 100%;
+      max-width: 400px;
+      padding: 25px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+      margin: 20px;
+      position: relative;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    .game-btn {
+      background-color: #4b7bec;
+      color: white;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .game-btn:hover {
+      background-color: #3867d6;
+    }
+    .glass-container {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+      height: 120px;
+      position: relative;
+    }
+    .glass {
+      width: 60px;
+      height: 80px;
+      background-color: #4b7bec;
+      border-radius: 12px 12px 0 0;
+      position: relative;
+      transition: transform 0.4s ease;
+    }
+    .glass:hover {
+      background-color: #3867d6;
+      cursor: pointer;
+    }
+    .ball {
+      width: 30px;
+      height: 30px;
+      background-color: crimson;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      transition: all 0.3s ease-in-out;
+    }
+    .hidden {
+      display: none;
+    }
+    .lives {
+      font-weight: bold;
+      color: #e74c3c;
+      margin-bottom: 10px;
+    }
+    .score {
+      font-weight: bold;
+      color: #27ae60;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Auth Container -->
+<div id="auth-container" class="container">
+  <h2 id="auth-title">Login</h2>
+  <div style="display: flex; justify-content: space-between;">
+    <button id="login-toggle" onclick="showLogin()" class="active">Login</button>
+    <button id="signup-toggle" onclick="showSignup()">Sign Up</button>
+  </div>
+  <input type="text" id="username" placeholder="Username" />
+  <input type="password" id="password" placeholder="Password" />
+  <button onclick="handleAuth()" class="game-btn" id="auth-btn">Login</button>
+  <p id="auth-message"></p>
+</div>
+
+<!-- Menu Container -->
+<div id="menu-container" class="container hidden">
+  <div style="text-align:right;"><button onclick="logout()">Logout</button></div>
+  <h2>Menu Game</h2>
+  <button class="game-btn" onclick="startGame('angka')">Tebak Angka</button>
+  <button class="game-btn" onclick="startGame('bola')">Tebak Bola</button>
+</div>
+
+<!-- Game Container -->
+<div id="game-container" class="container hidden">
+  <h2 id="game-title">Game</h2>
+  <button onclick="goBack()" class="game-btn" style="background-color: #e74c3c;">← Kembali</button>
+
+  <div id="tebakAngka" class="hidden">
+    <input type="number" id="angka" placeholder="Tebak angka 1-10" />
+    <button class="game-btn" onclick="checkTebakAngka()">Tebak</button>
+    <p id="tebakAngkaResult"></p>
+  </div>
+
+  <div id="tebakBola" class="hidden">
+    <p id="tebakBolaResult">Pilih gelas yang menurutmu ada bolanya!</p>
+    <div class="lives">❤️ Nyawa: <span id="lifeCount">3</span></div>
+    <div class="score">⭐ Skor: <span id="scoreCount">0</span></div>
+    <div class="glass-container" id="glassContainer">
+      <div class="glass" onclick="guessGlass(0)"></div>
+      <div class="glass" onclick="guessGlass(1)"></div>
+      <div class="glass" onclick="guessGlass(2)"></div>
+      <div class="ball hidden" id="ball"></div>
+    </div>
+    <button class="game-btn hidden" id="retryBtn" onclick="startGame('bola')">🔁 Coba Lagi</button>
+  </div>
+</div>
+
+<script>
+let currentUser = null;
+let correctGlass = null;
+let lives = 3;
+let score = 0;
+let canClick = false;
+
+function showLogin() {
+  document.getElementById("auth-title").innerText = "Login";
+  document.getElementById("auth-btn").innerText = "Login";
+}
+function showSignup() {
+  document.getElementById("auth-title").innerText = "Sign Up";
+  document.getElementById("auth-btn").innerText = "Sign Up";
+}
+function handleAuth() {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+  const hashed = CryptoJS.SHA256(password).toString();
+  const isLogin = document.getElementById("auth-btn").innerText === "Login";
+  const saved = localStorage.getItem(username);
+
+  if (isLogin) {
+    if (saved && saved === hashed) {
+      currentUser = username;
+      localStorage.setItem("loggedInUser", username);
+      document.getElementById("auth-container").classList.add("hidden");
+      document.getElementById("menu-container").classList.remove("hidden");
+    } else {
+      document.getElementById("auth-message").innerText = "Login gagal!";
+    }
+  } else {
+    localStorage.setItem(username, hashed);
+    document.getElementById("auth-message").innerText = "Akun berhasil dibuat! Silakan login.";
+  }
+}
+function logout() {
+  currentUser = null;
+  localStorage.removeItem("loggedInUser");
+  document.getElementById("menu-container").classList.add("hidden");
+  document.getElementById("auth-container").classList.remove("hidden");
+}
+function goBack() {
+  document.getElementById("game-container").classList.add("hidden");
+  document.getElementById("menu-container").classList.remove("hidden");
+}
+function startGame(type) {
+  document.getElementById("retryBtn").classList.add("hidden");
+  document.getElementById("menu-container").classList.add("hidden");
+  document.getElementById("game-container").classList.remove("hidden");
+  document.getElementById("tebakAngka").classList.toggle("hidden", type !== "angka");
+  document.getElementById("tebakBola").classList.toggle("hidden", type !== "bola");
+  document.getElementById("game-title").innerText = type === "angka" ? "Tebak Angka" : "Tebak Bola";
+  if (type === "bola") {
+    lives = 3;
+    score = 0;
+    document.getElementById("lifeCount").innerText = lives;
+    document.getElementById("scoreCount").innerText = score;
+    document.getElementById("tebakBolaResult").innerText = "Pilih gelas yang menurutmu ada bolanya!";
+    shuffleRonde();
+  }
+}
+function shuffleRonde() {
+  const ball = document.getElementById("ball");
+  canClick = false;
+  ball.classList.remove("hidden");
+  ball.style.left = "50%";
+  setTimeout(() => {
+    ball.classList.add("hidden");
+    correctGlass = Math.floor(Math.random() * 3);
+    shuffleGlasses(() => {
+      const glasses = document.querySelectorAll(".glass");
+      const glass = glasses[correctGlass];
+      ball.style.left = (glass.offsetLeft + 15) + "px";
+      canClick = true;
+    });
+  }, 1000);
+}
+function checkTebakAngka() {
+  const input = parseInt(document.getElementById("angka").value);
+  const rand = Math.floor(Math.random() * 10) + 1;
+  const result = document.getElementById("tebakAngkaResult");
+  result.innerText = input === rand ? "Benar!" : `Salah! Jawabannya: ${rand}`;
+}
+function guessGlass(index) {
+  if (!canClick || lives <= 0) return;
+  const result = document.getElementById("tebakBolaResult");
+  if (index === correctGlass) {
+    result.innerText = "🎉 Benar! Kamu menemukan bola!";
+    score++;
+    document.getElementById("scoreCount").innerText = score;
+    canClick = false;
+    setTimeout(() => {
+      result.innerText = "⏳ Mengacak ulang...";
+      shuffleRonde();
+    }, 1000);
+  } else {
+    lives--;
+    document.getElementById("lifeCount").innerText = lives;
+    result.innerText = `❌ Salah! Sisa nyawa: ${lives}`;
+    if (lives <= 0) {
+      result.innerText = "💀 Game Over!";
+      canClick = false;
+      document.getElementById("retryBtn").classList.remove("hidden");
+    }
+  }
+}
+function shuffleGlasses(callback) {
+  const glasses = Array.from(document.querySelectorAll(".glass"));
+  const ball = document.getElementById("ball");
+  const glassWidth = 90;
+  let positions = [0, 1, 2];
+  let shuffleTimes = 5;
+  function shuffleOnce(i = 0) {
+    if (i >= shuffleTimes) {
+      glasses.forEach(g => g.style.transform = "translateX(0)");
+      return setTimeout(callback, 300);
+    }
+    const [a, b] = getTwoIndexes();
+    [positions[a], positions[b]] = [positions[b], positions[a]];
+    glasses.forEach((g, idx) => {
+      g.style.transform = `translateX(${(positions[idx] - idx) * glassWidth}px)`;
+    });
+    correctGlass = Math.floor(Math.random() * 3);
+    setTimeout(() => shuffleOnce(i + 1), 400);
+  }
+  shuffleOnce();
+}
+function getTwoIndexes() {
+  let a = Math.floor(Math.random() * 3);
+  let b;
+  do {
+    b = Math.floor(Math.random() * 3);
+  } while (a === b);
+  return [a, b];
+}
+window.onload = function () {
+  const loggedInUser = localStorage.getItem("loggedInUser");
+  if (loggedInUser) {
+    currentUser = loggedInUser;
+    document.getElementById("auth-container").classList.add("hidden");
+    document.getElementById("menu-container").classList.remove("hidden");
+  }
+};
+</script>
+</body>
+</html>
